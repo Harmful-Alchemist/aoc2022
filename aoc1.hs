@@ -100,7 +100,7 @@ intersecting (x,y) = x `intersect` y
 intersecting3 (x,y, z) = x `intersect` y `intersect` z
 
 valueItem :: [Char] -> Int
-valueItem xs = if isUpper hd then (ord hd) -38 else (ord hd) -96
+valueItem xs = if isUpper hd then ord hd -38 else ord hd -96
     where hd = head xs
 
 group3 :: [String] -> [(String, String, String)]
