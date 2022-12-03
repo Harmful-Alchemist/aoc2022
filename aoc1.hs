@@ -1,4 +1,6 @@
-import Data.List
+import Data.List (intersect, sort)
+import Data.Char (ord, isUpper)
+
 day1 = do
     content <- readFile "input1.txt"
     let bundled = bundle (lines content) [] []
@@ -33,7 +35,7 @@ day2 = do
     return ()
 
 data Play = Rock | Paper | Scissors
-    deriving Eq 
+    deriving Eq
 
 toValue :: Play -> Int
 toValue Rock = 1
@@ -49,7 +51,7 @@ toDesiredPlay :: (Play, Play) -> (Play, Play)
 toDesiredPlay (opp, yours) = (opp, desiredPlay)
     where cmp = [(compare x opp, x) | x <- [Rock, Paper, Scissors]]
           desiredPlay = case lookup (toDesiredResult yours) cmp of
-            Just x -> x 
+            Just x -> x
             Nothing -> error "No"
 
 
@@ -81,3 +83,27 @@ scoreRound (opponent, yours) = playVal + scoreVal
 parseRound :: String -> (Play, Play)
 parseRound (opp : ' ' : yours : _ ) = (fromChar opp, fromChar yours)
 parseRound _ = error "No!"
+
+-- day 3
+day3 = do
+    content <- readFile "input3.txt"
+    let bundled = lines content
+    print $ sum $ map (valueItem . intersecting . split2) bundled
+    print $ sum $ map (valueItem . intersecting3) $ group3 bundled
+    return ()
+
+split2 :: [a] -> ([a], [a])
+split2 x = splitAt len x
+    where len = length x `div` 2
+
+intersecting (x,y) = x `intersect` y
+intersecting3 (x,y, z) = x `intersect` y `intersect` z
+
+valueItem :: [Char] -> Int
+valueItem xs = if isUpper hd then (ord hd) -38 else (ord hd) -96
+    where hd = head xs
+
+group3 :: [String] -> [(String, String, String)]
+group3 [] = []
+group3 (x:y:z:xs) = (x,y,z): group3 xs
+group3 _ = error "Nah"
