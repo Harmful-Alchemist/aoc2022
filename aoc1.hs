@@ -1,5 +1,6 @@
-import Data.List (intersect, sort)
-import Data.Char (ord, isUpper)
+import Data.List (intersect, sort, elemIndex, isSubsequenceOf)
+import Data.Char (ord, isUpper, digitToInt)
+import Data.Maybe (fromJust)
 
 day1 = do
     content <- readFile "input1.txt"
@@ -107,3 +108,38 @@ group3 :: [String] -> [(String, String, String)]
 group3 [] = []
 group3 (x:y:z:xs) = (x,y,z): group3 xs
 group3 _ = error "Nah"
+
+
+-- day 4
+day4 = do
+    content <- readFile "input4.txt"
+    let bundled = lines content
+    print $ length $ filter completeOverLap $ map parseLine bundled
+    print $ length $ filter anyOverlap $ map parseLine bundled
+    return ()
+
+completeOverLap :: ([Int], [Int]) -> Bool
+completeOverLap (xs,ys) | length xs < length ys = isSubsequenceOf xs ys
+                        | otherwise = isSubsequenceOf ys xs
+
+anyOverlap :: ([Int], [Int]) -> Bool
+anyOverlap (xs,ys) = not (null (xs `intersect` ys))
+
+parseLine :: String -> ([Int], [Int])
+parseLine xs = let (a,b) = splitOn ',' xs in (parsePart a,parsePart b)
+
+parsePart :: String -> [Int]
+parsePart xs = let (x',y') = splitOn '-' xs in (let  (x, y) = (toInt 0 x', toInt 0 y') in [x..y])
+
+
+splitOn :: Char -> String -> (String, String)
+splitOn  x xs = (a,b)
+    where splitted = elemIndex x xs
+          a = take (fromJust splitted) xs
+          b = drop (fromJust splitted + 1) xs
+
+toInt :: Int -> String -> Int
+toInt x [] = x
+toInt x (y:ys) = toInt (10*x + digitToInt y) ys
+
+
