@@ -1,6 +1,7 @@
 import Data.List (intersect, sort, elemIndex, isSubsequenceOf, group)
 import Data.Char (ord, isUpper, digitToInt, isDigit)
 import Data.Maybe (fromJust)
+import Control.Exception (handle)
 
 day1 = do
     content <- readFile "input1.txt"
@@ -226,3 +227,65 @@ start amount str n | length (dedup $ take amount str) == amount = n + amount - 1
 
 dedup :: Ord a => [a] -> [a]
 dedup = map head . group . sort
+
+--day7
+day7 = do
+    content <- readFile "input7.txt" 
+    let bundled = lines content
+    let (tree, _) = readInput7' bundled
+    let sizes = getSizes tree
+    print $ sum $ filter (<=100000) $ toInts sizes [] 
+    let (Dir _ _ size_total)= sizes
+    let free = 70000000 - size_total
+    let needed = 30000000 - free
+    print $ minimum $ filter (>=needed) $ toInts sizes []
+    return ()
+
+data Tree a = Dir String [Tree a] a | File String a
+    deriving Show
+
+readInput7' :: [String] -> (Tree Int, String)
+readInput7' = foldl readInput7 (Dir "/" [] 0,"/")
+
+readInput7 ::  (Tree Int, String) -> String  -> (Tree Int, String)
+readInput7 acc [] = acc
+readInput7   (tree,state) line = let split = words line in
+                                if head split == "$" then handleCmd (drop 1 split) (tree,state)
+                                else addContained tree state (words line)
+
+handleCmd :: [String] -> (Tree Int, String) -> (Tree Int, String)
+handleCmd ("ls":_) x = x
+handleCmd ("cd":"/":_) (tree,state) = (tree, "/")
+handleCmd ("cd":"..":_) (tree,state) = (tree, reverse $ dropWhile (/= '/') $ drop 1 $ reverse state)
+handleCmd ("cd":next:_) (tree,state) = (tree, state++next++"/")
+handleCmd _ _ = error "eh"
+
+addContained :: Tree Int -> String -> [String] -> (Tree Int,String)
+addContained tree path line | head line == "dir" = (addDir tree path (line !! 1),path)
+                            | otherwise          = (addFile tree line path,path)
+
+
+addFile :: Tree Int -> [String] -> String -> Tree Int
+addFile tree (size:name:_) path = let f = File name (read size) in addFile' f path tree 
+addFile _ _ _ = error "ah"
+
+addDir :: Tree Int -> String -> String -> Tree Int
+addDir tree path name = addFile' (Dir (path++name++"/") [] 0) path tree
+
+addFile' :: Tree Int -> String -> Tree Int -> Tree Int
+addFile' _ _ (File name size) = File name size
+addFile' toAdd path (Dir name subDirs _)| name == path = Dir name (toAdd:subDirs) 0
+                                        | otherwise    = Dir name (map (addFile' toAdd path) subDirs) 0
+
+
+toSize :: Tree Int -> Int
+toSize (File _ size) = size
+toSize (Dir _ xs _) = sum $ map toSize xs
+
+getSizes :: Tree Int -> Tree Int
+getSizes (File name size) = File name size
+getSizes (Dir name xs _) = Dir name (map getSizes xs) (sum $ map toSize xs)
+
+toInts ::  Tree Int -> [Int] -> [Int]
+toInts  (File _ size) ns = ns
+toInts (Dir _ xs size) ns = size: foldr toInts ns xs
