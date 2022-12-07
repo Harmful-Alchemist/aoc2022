@@ -1,4 +1,4 @@
-import Data.List (intersect, sort, elemIndex, isSubsequenceOf)
+import Data.List (intersect, sort, elemIndex, isSubsequenceOf, group)
 import Data.Char (ord, isUpper, digitToInt, isDigit)
 import Data.Maybe (fromJust)
 
@@ -170,7 +170,7 @@ parseCommand (_:'f':_:_:_:_: xs) (C x y z) = let (y', xs') =  parseNo xs 0 in pa
 parseCommand (_:'t':_:_: xs) (C x y z) = let (z', xs') =  parseNo xs 0 in C x y z'
 parseCommand _ _ = error "+"
 
-parseNo :: String ->Int -> (Int, String)
+parseNo :: String -> Int -> (Int, String)
 parseNo [] a = (a, [])
 parseNo (x:xs) a | isDigit x = parseNo xs (digitToInt  x + 10 * a)
                  | otherwise = (a, x:xs)
@@ -199,7 +199,7 @@ eval f cmds css = foldr (exec f) css cmds
 
 exec :: ([Crate] -> [Crate]) -> Cmd -> [[Crate]] -> [[Crate]]
 exec f (C amount from to) css = updateN (to-1) (updateN (from-1) css newFrom) newTo
-    where 
+    where
           oldTo = css !! (to - 1)
           oldFrom = css !! (from - 1)
           newTo = f (take amount oldFrom) ++ oldTo
@@ -210,3 +210,19 @@ updateN n xs x = let (b,a) = splitAt n xs in  b ++ [x] ++ drop 1 a
 
 tops :: [[Crate]] -> String
 tops = map (\x -> if not (null  x) then head x else ' ' )
+
+
+--day6
+day6 = do
+    content <- readFile "input6.txt"
+    let bundled = lines content
+    print $ start 4 (head bundled) 1
+    print $ start 14 (head bundled) 1
+    return ()
+
+start :: Int -> String -> Int -> Int
+start amount str n | length (dedup $ take amount str) == amount = n + amount - 1
+            | otherwise = start amount (drop 1 str) (n+1)
+
+dedup :: Ord a => [a] -> [a]
+dedup = map head . group . sort
