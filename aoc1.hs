@@ -101,7 +101,7 @@ split2 x = splitAt len x
 intersecting (x,y) = x `intersect` y
 intersecting3 (x,y, z) = x `intersect` y `intersect` z
 
-valueItem :: [Char] -> Int
+valueItem :: String -> Int
 valueItem xs = if isUpper hd then ord hd -38 else ord hd -96
     where hd = head xs
 
@@ -139,8 +139,7 @@ splitOn  x xs = (a,b)
           b = drop (fromJust splitted + 1) xs
 
 toInt :: Int -> String -> Int
-toInt x [] = x
-toInt x (y:ys) = toInt (10*x + digitToInt y) ys
+toInt x ys = foldl (\ x y -> 10 * x + digitToInt y) x ys
 
 --day 5
 day5 = do
@@ -230,11 +229,11 @@ dedup = map head . group . sort
 
 --day7
 day7 = do
-    content <- readFile "input7.txt" 
+    content <- readFile "input7.txt"
     let bundled = lines content
     let (tree, _) = readInput7' bundled
     let sizes = getSizes tree
-    print $ sum $ filter (<=100000) $ toInts sizes [] 
+    print $ sum $ filter (<=100000) $ toInts sizes []
     let (Dir _ _ size_total)= sizes
     let free = 70000000 - size_total
     let needed = 30000000 - free
@@ -266,7 +265,7 @@ addContained tree path line | head line == "dir" = (addDir tree path (line !! 1)
 
 
 addFile :: Tree Int -> [String] -> String -> Tree Int
-addFile tree (size:name:_) path = let f = File name (read size) in addFile' f path tree 
+addFile tree (size:name:_) path = let f = File name (read size) in addFile' f path tree
 addFile _ _ _ = error "ah"
 
 addDir :: Tree Int -> String -> String -> Tree Int
@@ -276,7 +275,6 @@ addFile' :: Tree Int -> String -> Tree Int -> Tree Int
 addFile' _ _ (File name size) = File name size
 addFile' toAdd path (Dir name subDirs _)| name == path = Dir name (toAdd:subDirs) 0
                                         | otherwise    = Dir name (map (addFile' toAdd path) subDirs) 0
-
 
 toSize :: Tree Int -> Int
 toSize (File _ size) = size
@@ -289,3 +287,55 @@ getSizes (Dir name xs _) = Dir name (map getSizes xs) (sum $ map toSize xs)
 toInts ::  Tree Int -> [Int] -> [Int]
 toInts  (File _ size) ns = ns
 toInts (Dir _ xs size) ns = size: foldr toInts ns xs
+
+--day8
+day8 = do
+    content <- readFile "input8.txt"
+    let bundled = lines content
+    let (hori, verti,_,_) = parse8' bundled
+    let dedup' = map head . group . sort
+    print $ length $ dedup' $ concatMap visible (hori++verti++map reverse hori++map reverse verti)
+    let all = dedup' $  concat (hori++verti)
+    let table = map (\(BT (x,y) h) -> ((x,y), h) ) all
+    print $ maximum (map (scenicScore table) all)
+
+scenicScore :: [((HorI, VerI), Int)] -> BioTree -> Int
+scenicScore table (BT (x,y) h) = dir1 * dir2 * dir3 * dir4
+    where dir1 = getDir (\(x',y') -> (x'+1,y'))
+          dir2 = getDir (\(x',y') -> (x'-1,y'))
+          dir3 = getDir (\(x',y') -> (x',y'+1))
+          dir4 = getDir (\(x',y') -> (x',y'-1))
+          getDir f = viewable (BT (x,y) h) table f (x,y) 0
+
+viewable :: BioTree -> [((HorI, VerI), Int)] -> ((Int,Int)->(Int,Int)) -> (Int,Int) -> Int ->  Int
+viewable (BT (x,y) h) table f curr acc = case lookup (f curr) table of
+                                            Nothing -> acc
+                                            Just x -> if x<h then viewable (BT (x,y) h) table f (f curr) (acc+1)
+                                                             else acc+1
+
+visible :: TreeRow -> TreeRow
+visible [] = []
+visible (x:xs)= visible' x [x] xs
+
+visible' :: BioTree ->  [BioTree] ->  [BioTree] -> [BioTree]
+visible' _ acc [] =  acc
+visible' (BT maxName maxHeight) acc ((BT name height):trees) =  if height > maxHeight then visible' (BT name height) (BT name height:acc) trees
+                                                                                  else visible' (BT maxName maxHeight) acc trees
+
+data BioTree = BT (HorI, VerI) Int
+  deriving (Show, Eq, Ord)
+type TreeRow = [BioTree]
+type HorI = Int
+type VerI = Int
+
+parse8' :: [String] -> ([TreeRow], [TreeRow], HorI, VerI)
+parse8' xs = foldl (\(hs,vs,hi,vi) str -> parse8 (hs,vs,hi+1,0) str) (empties, empties, -1,0)  xs
+    where empties = replicate (length$ head xs) ([] :: TreeRow)
+
+parse8 :: ([TreeRow], [TreeRow], HorI, VerI) -> String -> ([TreeRow], [TreeRow], HorI, VerI)
+parse8  acc []  = acc
+parse8 (hts, vts, hi, vi) (c:cs)  = parse8 (uhs,uvs,hi, vi+1) cs
+  where uhs = zippy hi hts
+        uvs = zippy vi vts
+        zippy index tss = [ if i == index then newTree:x else x | (i,x) <- zip [0..] tss]
+        newTree = BT (hi, vi) (read [c])
