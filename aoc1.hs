@@ -1,7 +1,6 @@
 import Data.List (intersect, sort, elemIndex, isSubsequenceOf, group)
 import Data.Char (ord, isUpper, digitToInt, isDigit)
 import Data.Maybe (fromJust)
-import Control.Exception (handle)
 
 day1 = do
     content <- readFile "input1.txt"
