@@ -338,3 +338,57 @@ parse8 (hts, vts, hi, vi) (c:cs)  = parse8 (uhs,uvs,hi, vi+1) cs
         uvs = zippy vi vts
         zippy index tss = [ if i == index then newTree:x else x | (i,x) <- zip [0..] tss]
         newTree = BT (hi, vi) (read [c])
+        
+-- day9
+day9 = do
+    content <- readFile "input9.txt"
+    let bundled = lines content
+    let (_,_,journey) = foldl parse9 ((0,0), (0,0), []) bundled
+    print $ length  $ dedup journey
+    print $ length $ dedup $ last (take 9 $ iterate followHead journey)
+    return ()
+
+type TailPos = (Int,Int)
+type HeadPos = (Int, Int)
+type TailVisited = [TailPos]
+data Direction = R|U|L|D
+
+parse9 :: (TailPos, HeadPos, TailVisited) -> String ->  (TailPos, HeadPos,TailVisited)
+parse9 acc ('R':no)  = move9 R (read no) acc
+parse9 acc ('U':no)  = move9 U (read no) acc
+parse9 acc ('L':no)  = move9 L (read no) acc
+parse9 acc ('D':no)  = move9 D (read no) acc
+parse9 _ _ = error "9"
+
+move9 :: Direction -> Int -> (TailPos, HeadPos, TailVisited) -> (TailPos, HeadPos,TailVisited)
+move9 _ 0 acc = acc
+move9 R n (t, (hx,hy), tps) = let tpos = move9' (hx,hy) (hx+1, hy) t in move9 R (n-1) (tpos, (hx+1, hy), tpos:tps)
+move9 U n (t, (hx,hy), tps) = let tpos = move9' (hx,hy) (hx, hy+1) t in move9 U (n-1) (tpos, (hx, hy+1), tpos:tps)
+move9 L n (t, (hx,hy), tps) = let tpos = move9' (hx,hy) (hx-1, hy) t in move9 L (n-1) (tpos, (hx-1, hy), tpos:tps)
+move9 D n (t, (hx,hy), tps) = let tpos = move9' (hx,hy) (hx, hy-1) t in move9 D (n-1) (tpos, (hx, hy-1), tpos:tps)
+
+move9' :: HeadPos -> HeadPos -> TailPos -> TailPos
+move9' (oldhx,oldhy) (hx,hy) (tx,ty) = if shouldMove (hx, hy) (tx,ty) then (oldhx,oldhy) else (tx,ty)
+
+move9'' :: HeadPos -> HeadPos -> TailPos -> TailPos
+move9'' (oldhx,oldhy) (hx,hy) (tx,ty) = if shouldMove (hx, hy) (tx,ty) then diagOption else (tx,ty)
+  where diagOption =  if diag (oldhx,oldhy) (hx,hy) then dm else (oldhx,oldhy)
+        dm | hx == tx && hy>ty = (tx, ty+1)
+           | hx == tx && hy<ty = (tx, ty-1)
+           | hy ==ty && hx>tx  = (tx+1, ty)
+           | hy ==ty && hx<tx  = (tx-1, ty)
+           | oldhx-1 == hx && oldhy-1 == hy = (tx-1, ty-1)
+           | oldhx-1 == hx && oldhy+1 == hy = (tx-1, ty+1)
+           | oldhx+1 == hx && oldhy-1 == hy = (tx+1, ty-1)
+           | oldhx+1 == hx && oldhy+1 == hy = (tx+1, ty+1)
+           | otherwise = error "91"
+ 
+diag :: (Eq a) => (a, a) -> (a, a) -> Bool
+diag (oldhx,oldhy) (hx,hy) = oldhx /= hx && oldhy /= hy
+
+followHead :: [HeadPos] -> TailVisited
+followHead poss = let prevnexts = zip ((0,0):reverse poss) (reverse poss) in foldl foldFn [] prevnexts
+  where foldFn list (prev,next) =  move9'' prev next (if null list then (0,0) else head list):list
+
+shouldMove :: HeadPos -> TailPos -> Bool
+shouldMove (hx, hy) (tx,ty) = hx == tx+2 || hy == ty+2 || hx == tx-2 || hy == ty-2
