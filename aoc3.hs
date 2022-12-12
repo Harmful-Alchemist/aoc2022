@@ -1,4 +1,9 @@
 import Data.List
+
+-- Nice speed-up compiled around 7 times for me.
+main :: IO ()
+main = day11
+
 day11 = do
     content <- readFile "input11.txt"
     let bundled = lines content
