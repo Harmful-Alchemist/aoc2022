@@ -15,10 +15,11 @@ day12 = do
     let end = getCoord $ head $ filter (\n -> getType n == End) coords
     let withOutgoingEdges = addEdges mapped
     print "-----------------------------------"
-    print $ dfsish' start withOutgoingEdges end
+    let part1 = bfsish' start maxBound withOutgoingEdges end
+    print part1
     print "-----------------------------------"
     let starts = map getCoord $ filter (\n -> getHeight n == 'a') coords
-    print $ minimum $ map (\s -> dfsish' s withOutgoingEdges end) starts
+    print $ minimum $ map (\s -> bfsish' s part1 withOutgoingEdges end) starts
     return ()
 
 
@@ -59,17 +60,18 @@ getType (N c i t ns) = t
 getConnected :: Node -> [Coordinate]
 getConnected (N c i t ns) = ns
 
-getHeight :: Node -> Char 
+getHeight :: Node -> Char
 getHeight (N c i t ns) = chr i
 
-dfsish' :: Coordinate ->  Map Coordinate Node -> Coordinate -> Int
-dfsish' start = dfsish [start] [start] 0
+bfsish' :: Coordinate -> Int ->  Map Coordinate Node -> Coordinate -> Int
+bfsish' start knownMin = bfsish [start] [start] knownMin 0
 
-dfsish :: [Coordinate] -> [Coordinate] -> Int -> Map Coordinate Node -> Coordinate ->  Int
-dfsish visited lastRound roundNo mapped end | end `elem` visited = roundNo
+bfsish :: [Coordinate] -> [Coordinate] -> Int -> Int -> Map Coordinate Node -> Coordinate ->  Int
+bfsish visited lastRound knownMin roundNo mapped end | end `elem` visited = roundNo
+                                            | roundNo >= knownMin = roundNo
                                             | null lastRound     = maxBound
-                                            | otherwise          = dfsish (visited++connected) connected  (roundNo+1) mapped end
-                                    where connected = dedup $ filter (`notElem` visited) $ concatMap (getConnected . (mapped !) ) lastRound
+                                            | otherwise          = bfsish (visited++connected) connected knownMin (roundNo+1) mapped end
+                                    where connected = dedup $ concatMap (filter (`notElem` visited) . getConnected . (mapped !) ) lastRound
 
 dedup :: [Coordinate] -> [Coordinate]
 dedup = map head . group  . sort
